@@ -6,6 +6,8 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
+import com.amazonaws.services.ec2.model.AvailabilityZone;
+import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Instance;
@@ -16,6 +18,8 @@ import com.amazonaws.services.ec2.model.StartInstancesRequest;
 import com.amazonaws.services.ec2.model.StopInstancesRequest;
 import com.amazonaws.services.ec2.model.RebootInstancesRequest;
 import com.amazonaws.services.ec2.model.RebootInstancesResult;
+import com.amazonaws.services.ec2.model.DescribeRegionsResult;
+import com.amazonaws.services.ec2.model.Region;
 
 public class awsTest {
 
@@ -51,6 +55,7 @@ public class awsTest {
 		Scanner menu = new Scanner(System.in);
 		Scanner id_string = new Scanner(System.in);
 		int number = 0;
+		boolean exit=false;
 		String instanceId;
 		while(true)
 		{
@@ -78,7 +83,7 @@ public class awsTest {
 				break;
 			
 			case 2:
-			
+				availableZones();
 				break;
 			case 3:
 				System.out.println("Enter instance id : ");
@@ -102,8 +107,14 @@ public class awsTest {
 			case 8:
 				break;
 			case 99:
+				exit=true;
 				break;
 			default :
+				break;
+			}
+			if(exit==true) {
+				System.out.println();
+				System.out.println("End Program!");
 				break;
 			}
 		}
@@ -142,6 +153,24 @@ public class awsTest {
 
 	}
 	
+	public static void availableZones(){
+		int count=0;
+		DescribeAvailabilityZonesResult zones_response =
+			    ec2.describeAvailabilityZones();
+
+			for(AvailabilityZone zone : zones_response.getAvailabilityZones()) {
+			    System.out.printf(
+			        "[id]  %s,  " +
+			        "[region]    %s,  " +
+			        "[zone]      %s  ",
+			        zone.getZoneId(),
+			        zone.getRegionName(),
+			        zone.getZoneName());
+			    System.out.println();
+			    count++;
+			}
+			System.out.println("\nYou have access to "+count+" Availability Zones.");
+	}
 	
 	public static void startInstances(String instance_id) {
 
