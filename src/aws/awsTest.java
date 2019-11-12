@@ -14,6 +14,8 @@ import com.amazonaws.services.ec2.model.Reservation;
 
 import com.amazonaws.services.ec2.model.StartInstancesRequest;
 import com.amazonaws.services.ec2.model.StopInstancesRequest;
+import com.amazonaws.services.ec2.model.RebootInstancesRequest;
+import com.amazonaws.services.ec2.model.RebootInstancesResult;
 
 public class awsTest {
 
@@ -93,6 +95,9 @@ public class awsTest {
 			case 6:
 				break;
 			case 7:
+				System.out.println("Enter instance id : ");
+				instanceId=id_string.next();
+				rebootInstances(instanceId);
 				break;
 			case 8:
 				break;
@@ -164,6 +169,19 @@ public class awsTest {
 		ec2.stopInstances(request);
 
 		System.out.printf("Successfully stop instance %s", instance_id);
+
+	}
+	
+	public static void rebootInstances(String instance_id) {
+
+
+
+		RebootInstancesRequest request = new RebootInstancesRequest()
+				.withInstanceIds(instance_id);
+
+		RebootInstancesResult response = ec2.rebootInstances(request);
+		System.out.printf("Successfully reboot instance %s", instance_id);
+
 
 	}
 } 
