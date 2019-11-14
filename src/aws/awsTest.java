@@ -2,6 +2,8 @@ package aws;
 
 import java.util.Scanner;
 
+import org.apache.commons.codec.binary.StringUtils;
+
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
@@ -24,15 +26,15 @@ import com.amazonaws.services.ec2.model.Region;
 public class awsTest {
 
 	static AmazonEC2 ec2;
-	
-	
+
+
 
 	private static void init() throws Exception {
 		/*
-		* The ProfileCredentialsProvider will return your [default]
-		* credential profile by reading from the credentials file located at
-		* (~/.aws/credentials).
-		*/
+		 * The ProfileCredentialsProvider will return your [default]
+		 * credential profile by reading from the credentials file located at
+		 * (~/.aws/credentials).
+		 */
 		ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider();
 		try {
 			credentialsProvider.getCredentials();
@@ -49,7 +51,7 @@ public class awsTest {
 				.withRegion("us-east-1") /* check the region at AWS console */
 				.build();
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		init();
 		Scanner menu = new Scanner(System.in);
@@ -74,14 +76,14 @@ public class awsTest {
 			System.out.println(" 99. quit ");
 			System.out.println("------------------------------------------------------------");
 			System.out.print("Enter an integer: ");
-			
+
 			number = menu.nextInt();
 
 			switch(number) {
 			case 1 :
 				listInstances();
 				break;
-			
+
 			case 2:
 				availableZones();
 				break;
@@ -91,6 +93,7 @@ public class awsTest {
 				startInstances(instanceId);
 				break;
 			case 4:
+				availableRegions();
 				break;
 			case 5:
 				System.out.println("Enter instance id : ");
@@ -123,7 +126,7 @@ public class awsTest {
 	public static void listInstances(){
 		System.out.println("Listing instances....");
 		boolean done = false;
-
+		
 		DescribeInstancesRequest request = new DescribeInstancesRequest();
 		while(!done) {
 			DescribeInstancesResult response = ec2.describeInstances(request);
@@ -152,63 +155,79 @@ public class awsTest {
 		}
 
 	}
-	
+
 	public static void availableZones(){
 		int count=0;
-		DescribeAvailabilityZonesResult zones_response =
-			    ec2.describeAvailabilityZones();
+		DescribeAvailabilityZonesResult zones_response = ec2.describeAvailabilityZones();
 
-			for(AvailabilityZone zone : zones_response.getAvailabilityZones()) {
-			    System.out.printf(
-			        "[id]  %s,  " +
-			        "[region]    %s,  " +
-			        "[zone]      %s  ",
-			        zone.getZoneId(),
-			        zone.getRegionName(),
-			        zone.getZoneName());
-			    System.out.println();
-			    count++;
-			}
-			System.out.println("\nYou have access to "+count+" Availability Zones.");
+		for(AvailabilityZone zone : zones_response.getAvailabilityZones()) {
+			System.out.printf(
+					"[id]  %s,  " +
+							"[region]   %s,  " +
+							"[zone]   %s  ",
+							zone.getZoneId(),
+							zone.getRegionName(),
+							zone.getZoneName());
+			System.out.println();
+			count++;
+		}
+		System.out.println("\nYou have access to "+count+" Availability Zones.");
 	}
-	
+
 	public static void startInstances(String instance_id) {
 
-		
-        StartInstancesRequest request = new StartInstancesRequest()
-            .withInstanceIds(instance_id);
 
-        ec2.startInstances(request);
+		StartInstancesRequest request = new StartInstancesRequest().withInstanceIds(instance_id);
 
-        System.out.printf("Successfully started instance %s", instance_id);
-           
-        
-        
-        
-        
+		ec2.startInstances(request);
+
+		System.out.printf("Successfully started instance %s", instance_id);
+
+
+
+
+	}
+
+	public static void availableRegions(){
+
+		DescribeRegionsResult regions_response = ec2.describeRegions();
+
+		for(Region region : regions_response.getRegions()) {
+			System.out.printf("[region]"+ getLPad(region.getRegionName(),16,  " ")+
+							  ", [endpoint] "+region.getEndpoint());
+	
+			System.out.println();
+		}
+
 	}
 	
+	public static String getLPad(String str, int size, String strFillText) {  // Fill string blanks
+		for(int i = (str.getBytes()).length; i < size; i++) {
+			str = strFillText + str;
+		}
+		return str;
+	}
+
 	public static void stopInstances(String instance_id) {
 
 
 
-		StopInstancesRequest request = new StopInstancesRequest()
-			.withInstanceIds(instance_id);
+		StopInstancesRequest request = new StopInstancesRequest().withInstanceIds(instance_id);
 
 		ec2.stopInstances(request);
 
 		System.out.printf("Successfully stop instance %s", instance_id);
 
 	}
-	
+
 	public static void rebootInstances(String instance_id) {
 
 
 
-		RebootInstancesRequest request = new RebootInstancesRequest()
-				.withInstanceIds(instance_id);
+		RebootInstancesRequest request = new RebootInstancesRequest().withInstanceIds(instance_id);
 
 		RebootInstancesResult response = ec2.rebootInstances(request);
+		
 		System.out.printf("Successfully reboot instance %s", instance_id);
 
 
