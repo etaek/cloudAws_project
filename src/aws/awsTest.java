@@ -1,5 +1,7 @@
 package aws;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 import org.apache.commons.codec.binary.StringUtils;
@@ -9,18 +11,26 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.AvailabilityZone;
+import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
+import com.amazonaws.services.ec2.model.CreateKeyPairResult;
 import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
+import com.amazonaws.services.ec2.model.DescribeImagesRequest;
+import com.amazonaws.services.ec2.model.DescribeImagesResult;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Instance;
-
+import com.amazonaws.services.ec2.model.InstanceType;
+import com.amazonaws.services.ec2.model.KeyPair;
 import com.amazonaws.services.ec2.model.Reservation;
-
+import com.amazonaws.services.ec2.model.RunInstancesRequest;
+import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.StartInstancesRequest;
 import com.amazonaws.services.ec2.model.StopInstancesRequest;
 import com.amazonaws.services.ec2.model.RebootInstancesRequest;
 import com.amazonaws.services.ec2.model.RebootInstancesResult;
 import com.amazonaws.services.ec2.model.DescribeRegionsResult;
+import com.amazonaws.services.ec2.model.Filter;
+import com.amazonaws.services.ec2.model.Image;
 import com.amazonaws.services.ec2.model.Region;
 
 public class awsTest {
@@ -59,6 +69,7 @@ public class awsTest {
 		int number = 0;
 		boolean exit=false;
 		String instanceId;
+		String amiId;
 		while(true)
 		{
 			System.out.println(" ");
@@ -101,6 +112,9 @@ public class awsTest {
 				stopInstances(instanceId);
 				break;
 			case 6:
+				System.out.println("Enter ami id : ");
+				amiId=id_string.next();
+				createInstances(amiId);
 				break;
 			case 7:
 				System.out.println("Enter instance id : ");
@@ -108,6 +122,8 @@ public class awsTest {
 				rebootInstances(instanceId);
 				break;
 			case 8:
+				System.out.println("Listing Images....");
+				listImages();
 				break;
 			case 99:
 				exit=true;
@@ -126,7 +142,7 @@ public class awsTest {
 	public static void listInstances(){
 		System.out.println("Listing instances....");
 		boolean done = false;
-		
+
 		DescribeInstancesRequest request = new DescribeInstancesRequest();
 		while(!done) {
 			DescribeInstancesResult response = ec2.describeInstances(request);
@@ -194,13 +210,13 @@ public class awsTest {
 
 		for(Region region : regions_response.getRegions()) {
 			System.out.printf("[region]"+ getLPad(region.getRegionName(),16,  " ")+
-							  ", [endpoint] "+region.getEndpoint());
-	
+					", [endpoint] "+region.getEndpoint());
+
 			System.out.println();
 		}
 
 	}
-	
+
 	public static String getLPad(String str, int size, String strFillText) {  // Fill string blanks
 		for(int i = (str.getBytes()).length; i < size; i++) {
 			str = strFillText + str;
@@ -219,6 +235,35 @@ public class awsTest {
 		System.out.printf("Successfully stop instance %s", instance_id);
 
 	}
+	public static void createInstances(String ami_id) {
+		CreateKeyPairRequest createKeyPairRequest = new CreateKeyPairRequest();
+
+		createKeyPairRequest.withKeyName("cloudkey");
+
+		CreateKeyPairResult createKeyPairResult =
+				ec2.createKeyPair(createKeyPairRequest);
+
+		KeyPair keyPair = new KeyPair();
+
+		keyPair = createKeyPairResult.getKeyPair();
+
+		String privateKey = keyPair.getKeyMaterial();
+		RunInstancesRequest run_request = new RunInstancesRequest()
+				.withImageId(ami_id)
+				.withInstanceType(InstanceType.T1Micro)
+				.withMaxCount(1)
+				.withMinCount(1);
+			
+
+
+		RunInstancesResult run_response = ec2.runInstances(run_request);
+
+		String reservation_id = run_response.getReservation().getInstances().get(0).getInstanceId();
+
+		System.out.printf(
+				"Successfully started EC2 instance %s based on AMI %s",
+				reservation_id, ami_id);
+	}
 
 	public static void rebootInstances(String instance_id) {
 
@@ -227,9 +272,41 @@ public class awsTest {
 		RebootInstancesRequest request = new RebootInstancesRequest().withInstanceIds(instance_id);
 
 		RebootInstancesResult response = ec2.rebootInstances(request);
-		
+
 		System.out.printf("Successfully reboot instance %s", instance_id);
+	
+
+	}
+
+	public static void listImages() {
+		  
+			DescribeImagesRequest describeImagesRequest = new DescribeImagesRequest();
+			List<Filter> filters = new ArrayList<>();
+		    Filter filter = new Filter();
+		    filter.setName("is-public");
+		   
+		    List<String> values = new ArrayList<>();
+		    values.add("false");
+		    filter.setValues(values);
+		    filters.add(filter);
+		    describeImagesRequest.setFilters(filters);
+		    
+		  
+		    DescribeImagesResult describeImagesResult = ec2.describeImages(describeImagesRequest);
+		    List<Image> images = describeImagesResult.getImages();
+
+		   
+		 
+		    for(int i=0;i<images.size();i++) {
+		    	System.out.print("[ImageID] " + images.get(i).getImageId()+
+		    			         ", [Name] "+images.get(i).getName()+
+		    			         ", [Owner] "+images.get(i).getOwnerId());
+	
+		   
+		    }
+
 
 
 	}
+
 } 
