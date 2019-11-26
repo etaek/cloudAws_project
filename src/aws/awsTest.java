@@ -122,7 +122,6 @@ public class awsTest {
 				rebootInstances(instanceId);
 				break;
 			case 8:
-				System.out.println("Listing Images....");
 				listImages();
 				break;
 			case 99:
@@ -177,13 +176,10 @@ public class awsTest {
 		DescribeAvailabilityZonesResult zones_response = ec2.describeAvailabilityZones();
 
 		for(AvailabilityZone zone : zones_response.getAvailabilityZones()) {
-			System.out.printf(
-					"[id]  %s,  " +
-							"[region]   %s,  " +
-							"[zone]   %s  ",
-							zone.getZoneId(),
-							zone.getRegionName(),
-							zone.getZoneName());
+			System.out.print("[id]  " + zone.getZoneId()+
+					",  [region]  " + zone.getRegionName()+
+					",  [zone]  "+ zone.getZoneName());
+
 			System.out.println();
 			count++;
 		}
@@ -209,9 +205,7 @@ public class awsTest {
 		DescribeRegionsResult regions_response = ec2.describeRegions();
 
 		for(Region region : regions_response.getRegions()) {
-			System.out.printf("[region]"+ getLPad(region.getRegionName(),16,  " ")+
-					", [endpoint] "+region.getEndpoint());
-
+			System.out.print("[region]"+ getLPad(region.getRegionName(),16,  " ")+ ", [endpoint] "+region.getEndpoint());
 			System.out.println();
 		}
 
@@ -235,34 +229,23 @@ public class awsTest {
 		System.out.printf("Successfully stop instance %s", instance_id);
 
 	}
+
 	public static void createInstances(String ami_id) {
-		CreateKeyPairRequest createKeyPairRequest = new CreateKeyPairRequest();
 
-		createKeyPairRequest.withKeyName("cloudkey");
-
-		CreateKeyPairResult createKeyPairResult =
-				ec2.createKeyPair(createKeyPairRequest);
-
-		KeyPair keyPair = new KeyPair();
-
-		keyPair = createKeyPairResult.getKeyPair();
-
-		String privateKey = keyPair.getKeyMaterial();
 		RunInstancesRequest run_request = new RunInstancesRequest()
 				.withImageId(ami_id)
-				.withInstanceType(InstanceType.T1Micro)
+				.withInstanceType(InstanceType.T2Micro)
 				.withMaxCount(1)
-				.withMinCount(1);
-			
+				.withMinCount(1)
+				.withKeyName("awskey");
 
 
 		RunInstancesResult run_response = ec2.runInstances(run_request);
 
 		String reservation_id = run_response.getReservation().getInstances().get(0).getInstanceId();
 
-		System.out.printf(
-				"Successfully started EC2 instance %s based on AMI %s",
-				reservation_id, ami_id);
+		System.out.print("Successfully started EC2 instance "+ reservation_id +" based on AMI "+ami_id);
+
 	}
 
 	public static void rebootInstances(String instance_id) {
@@ -274,36 +257,38 @@ public class awsTest {
 		RebootInstancesResult response = ec2.rebootInstances(request);
 
 		System.out.printf("Successfully reboot instance %s", instance_id);
-	
+
 
 	}
 
-	public static void listImages() {
-		  
-			DescribeImagesRequest describeImagesRequest = new DescribeImagesRequest();
-			List<Filter> filters = new ArrayList<>();
-		    Filter filter = new Filter();
-		    filter.setName("is-public");
-		   
-		    List<String> values = new ArrayList<>();
-		    values.add("false");
-		    filter.setValues(values);
-		    filters.add(filter);
-		    describeImagesRequest.setFilters(filters);
-		    
-		  
-		    DescribeImagesResult describeImagesResult = ec2.describeImages(describeImagesRequest);
-		    List<Image> images = describeImagesResult.getImages();
 
-		   
-		 
-		    for(int i=0;i<images.size();i++) {
-		    	System.out.print("[ImageID] " + images.get(i).getImageId()+
-		    			         ", [Name] "+images.get(i).getName()+
-		    			         ", [Owner] "+images.get(i).getOwnerId());
-	
-		   
-		    }
+	public static void listImages() {
+		
+		System.out.println("Listing Images....");
+		DescribeImagesRequest request = new DescribeImagesRequest();
+		List<Filter> filters = new ArrayList<>();
+		Filter filter = new Filter();
+		filter.setName("is-public");
+
+		List<String> values = new ArrayList<>();
+		values.add("false");
+		filter.setValues(values);
+		filters.add(filter);
+		request.setFilters(filters);
+
+
+		DescribeImagesResult result = ec2.describeImages(request);
+		List<Image> images = result.getImages();
+
+
+
+		for(int i=0;i<images.size();i++) {
+			System.out.print("[ImageID] " + images.get(i).getImageId()+
+					", [Name] "+images.get(i).getName()+
+					", [Owner] "+images.get(i).getOwnerId());
+
+
+		}
 
 
 
