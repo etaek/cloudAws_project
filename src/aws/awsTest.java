@@ -13,19 +13,26 @@ import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.AvailabilityZone;
 import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
 import com.amazonaws.services.ec2.model.CreateKeyPairResult;
+import com.amazonaws.services.ec2.model.DeleteKeyPairRequest;
+import com.amazonaws.services.ec2.model.DeleteKeyPairResult;
 import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
 import com.amazonaws.services.ec2.model.DescribeImagesRequest;
 import com.amazonaws.services.ec2.model.DescribeImagesResult;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
+import com.amazonaws.services.ec2.model.DescribeKeyPairsResult;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceType;
 import com.amazonaws.services.ec2.model.KeyPair;
+import com.amazonaws.services.ec2.model.KeyPairInfo;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.StartInstancesRequest;
+import com.amazonaws.services.ec2.model.StartInstancesResult;
 import com.amazonaws.services.ec2.model.StopInstancesRequest;
+import com.amazonaws.services.ec2.model.StopInstancesResult;
+import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.RebootInstancesRequest;
 import com.amazonaws.services.ec2.model.RebootInstancesResult;
 import com.amazonaws.services.ec2.model.DescribeRegionsResult;
@@ -37,7 +44,7 @@ public class awsTest {
 
 	static AmazonEC2 ec2;
 
-
+	static boolean error=false;
 
 	private static void init() throws Exception {
 		/*
@@ -64,12 +71,14 @@ public class awsTest {
 
 	public static void main(String[] args) throws Exception {
 		init();
+
 		Scanner menu = new Scanner(System.in);
 		Scanner id_string = new Scanner(System.in);
 		int number = 0;
 		boolean exit=false;
 		String instanceId;
 		String amiId;
+		String keypair;
 		while(true)
 		{
 			System.out.println(" ");
@@ -80,16 +89,18 @@ public class awsTest {
 			System.out.println(" Cloud Computing, Computer Science Department ");
 			System.out.println(" at Chungbuk National University ");
 			System.out.println("------------------------------------------------------------");
-			System.out.println(" 1. list instance 2. available zones ");
-			System.out.println(" 3. start instance 4. available regions ");
-			System.out.println(" 5. stop instance 6. create instance ");
-			System.out.println(" 7. reboot instance 8. list images ");
+			System.out.println(" 1. list instance   2. available zones ");
+			System.out.println(" 3. start instance  4. available regions ");
+			System.out.println(" 5. stop instance   6. create instance ");
+			System.out.println(" 7. reboot instance 8. delete instance ");
+			System.out.println(" 9. list images     10. list keypair ");
+			System.out.println(" 11. create keypair 12. delete keypair ");
 			System.out.println(" 99. quit ");
 			System.out.println("------------------------------------------------------------");
 			System.out.print("Enter an integer: ");
 
 			number = menu.nextInt();
-
+			error=false;
 			switch(number) {
 			case 1 :
 				listInstances();
@@ -114,7 +125,9 @@ public class awsTest {
 			case 6:
 				System.out.println("Enter ami id : ");
 				amiId=id_string.next();
-				createInstances(amiId);
+				System.out.println("Enter keypair name : ");
+				keypair=id_string.next();
+				createInstances(amiId,keypair);
 				break;
 			case 7:
 				System.out.println("Enter instance id : ");
@@ -122,12 +135,29 @@ public class awsTest {
 				rebootInstances(instanceId);
 				break;
 			case 8:
+				System.out.println("Enter instance id : ");
+				instanceId=id_string.next();
+				deleteInstances(instanceId);
+				break;
+			case 9:
 				listImages();
+				break;
+			case 10:
+				listKeyPairs();
+				break;
+			case 11:
+				createKeyPairs(); 
+				break;
+			case 12:
+				System.out.println("Enter keypair name : ");
+				keypair=id_string.next();
+				deleteKeyPairs(keypair);
 				break;
 			case 99:
 				exit=true;
 				break;
 			default :
+				System.out.println("Wrong number!");
 				break;
 			}
 			if(exit==true) {
@@ -144,8 +174,8 @@ public class awsTest {
 
 		DescribeInstancesRequest request = new DescribeInstancesRequest();
 		while(!done) {
-			DescribeInstancesResult response = ec2.describeInstances(request);
-			for(Reservation reservation : response.getReservations()) {
+			DescribeInstancesResult result = ec2.describeInstances(request);
+			for(Reservation reservation : result.getReservations()) {
 				for(Instance instance : reservation.getInstances()) {
 					System.out.printf(
 							"[id] %s, " +
@@ -161,9 +191,9 @@ public class awsTest {
 				}
 				System.out.println();
 			}
-			request.setNextToken(response.getNextToken());
+			request.setNextToken(result.getNextToken());
 
-			if(response.getNextToken() == null) {
+			if(result.getNextToken() == null) {
 				done = true;
 			}
 
@@ -173,14 +203,13 @@ public class awsTest {
 
 	public static void availableZones(){
 		int count=0;
-		DescribeAvailabilityZonesResult zones_response = ec2.describeAvailabilityZones();
+		DescribeAvailabilityZonesResult result = ec2.describeAvailabilityZones();
 
-		for(AvailabilityZone zone : zones_response.getAvailabilityZones()) {
-			System.out.print("[id]  " + zone.getZoneId()+
+		for(AvailabilityZone zone : result.getAvailabilityZones()) {
+			System.out.println("[id]  " + zone.getZoneId()+
 					",  [region]  " + zone.getRegionName()+
 					",  [zone]  "+ zone.getZoneName());
 
-			System.out.println();
 			count++;
 		}
 		System.out.println("\nYou have access to "+count+" Availability Zones.");
@@ -188,12 +217,18 @@ public class awsTest {
 
 	public static void startInstances(String instance_id) {
 
+		System.out.println("Starting Instance.... "+instance_id);
 
-		StartInstancesRequest request = new StartInstancesRequest().withInstanceIds(instance_id);
+		try {
+			StartInstancesRequest request = new StartInstancesRequest().withInstanceIds(instance_id);
+			ec2.startInstances(request);
+		}catch(Exception e) {
+			System.out.println("ERROR : Nonexistent Instance!");
+			error=true;
+		}
 
-		ec2.startInstances(request);
-
-		System.out.printf("Successfully started instance %s", instance_id);
+		if(error!=true)
+			System.out.println("Successfully started instance "+ instance_id);
 
 
 
@@ -202,11 +237,10 @@ public class awsTest {
 
 	public static void availableRegions(){
 
-		DescribeRegionsResult regions_response = ec2.describeRegions();
+		DescribeRegionsResult result = ec2.describeRegions();
 
-		for(Region region : regions_response.getRegions()) {
-			System.out.print("[region]"+ getLPad(region.getRegionName(),16,  " ")+ ", [endpoint] "+region.getEndpoint());
-			System.out.println();
+		for(Region region : result.getRegions()) {
+			System.out.println("[region]"+ getLPad(region.getRegionName(),16,  " ")+ ", [endpoint] "+region.getEndpoint());
 		}
 
 	}
@@ -221,51 +255,82 @@ public class awsTest {
 	public static void stopInstances(String instance_id) {
 
 
+		System.out.println("Stopping Instance.... "+instance_id);
 
-		StopInstancesRequest request = new StopInstancesRequest().withInstanceIds(instance_id);
 
-		ec2.stopInstances(request);
+		try {
+			StopInstancesRequest request = new StopInstancesRequest().withInstanceIds(instance_id);
+			StopInstancesResult result = ec2.stopInstances(request);
+		}catch(Exception e) {
+			System.out.println("ERROR : Nonexistent Instance!");
+			error=true;
+		}
 
-		System.out.printf("Successfully stop instance %s", instance_id);
+		if(error!=true)
+			System.out.printf("Successfully stop instance %s", instance_id);
+
 
 	}
 
-	public static void createInstances(String ami_id) {
+	public static void createInstances(String ami_id,String keypair) {
 
-		RunInstancesRequest run_request = new RunInstancesRequest()
+
+		RunInstancesRequest request = new RunInstancesRequest()
 				.withImageId(ami_id)
 				.withInstanceType(InstanceType.T2Micro)
 				.withMaxCount(1)
 				.withMinCount(1)
-				.withKeyName("awskey");
+				.withKeyName(keypair);
 
 
-		RunInstancesResult run_response = ec2.runInstances(run_request);
+		RunInstancesResult result  = ec2.runInstances(request);
 
-		String reservation_id = run_response.getReservation().getInstances().get(0).getInstanceId();
+		String reservation_id = result .getReservation().getInstances().get(0).getInstanceId();
 
-		System.out.print("Successfully started EC2 instance "+ reservation_id +" based on AMI "+ami_id);
+		System.out.println("Successfully started EC2 instance "+ reservation_id +" based on AMI "+ami_id);
 
 	}
 
 	public static void rebootInstances(String instance_id) {
 
-
-
-		RebootInstancesRequest request = new RebootInstancesRequest().withInstanceIds(instance_id);
-
-		RebootInstancesResult response = ec2.rebootInstances(request);
-
-		System.out.printf("Successfully reboot instance %s", instance_id);
+		System.out.println("Rebooting Instance.... "+instance_id);
+		try {
+			RebootInstancesRequest request = new RebootInstancesRequest().withInstanceIds(instance_id);
+			RebootInstancesResult result = ec2.rebootInstances(request);
+		}catch(Exception e) {
+			System.out.println("ERROR : Instance is not running!");
+			error=true;
+		}
+		if(error!=true)
+			System.out.println("Successfully reboot instance " + instance_id);
 
 
 	}
 
+	public static void deleteInstances(String instance_id) {
 
+		System.out.println("Terminating Instance.... "+instance_id);
+		try {
+			TerminateInstancesRequest request = new TerminateInstancesRequest()
+					.withInstanceIds(instance_id);
+			ec2.terminateInstances(request)
+			.getTerminatingInstances()
+			.get(0)
+			.getPreviousState()
+			.getName();
+		}catch(Exception e) {
+			System.out.println("ERROR : Nonexistent Instance!");
+			error=true;
+		}
+		if(error!=true)
+			System.out.println("The Instance is terminated with id: "+ instance_id);
+
+	}
 	public static void listImages() {
-		
+
 		System.out.println("Listing Images....");
 		DescribeImagesRequest request = new DescribeImagesRequest();
+
 		List<Filter> filters = new ArrayList<>();
 		Filter filter = new Filter();
 		filter.setName("is-public");
@@ -283,7 +348,7 @@ public class awsTest {
 
 
 		for(int i=0;i<images.size();i++) {
-			System.out.print("[ImageID] " + images.get(i).getImageId()+
+			System.out.println("[ImageID] " + images.get(i).getImageId()+
 					", [Name] "+images.get(i).getName()+
 					", [Owner] "+images.get(i).getOwnerId());
 
@@ -294,4 +359,59 @@ public class awsTest {
 
 	}
 
+	public static void createKeyPairs() {
+
+		Scanner scan = new Scanner(System.in);
+
+
+		System.out.print("input keyname : ");
+		String key= scan.next();
+
+		CreateKeyPairRequest request = new CreateKeyPairRequest();
+		request.withKeyName(key);
+
+		CreateKeyPairResult result =ec2.createKeyPair(request);
+
+		System.out.println();
+		System.out.println("Successfully create keypairs  "+key);
+
+	}
+
+	public static void listKeyPairs() {
+
+		DescribeKeyPairsResult result = ec2.describeKeyPairs();
+
+		for(KeyPairInfo key_pair : result.getKeyPairs()) {
+
+			System.out.println( "[name] " +  key_pair.getKeyName());
+
+		}
+
+	}
+
+	public static void deleteKeyPairs(String keypair) {
+		DescribeKeyPairsResult show_result = ec2.describeKeyPairs();
+
+		for(KeyPairInfo key_pair : show_result.getKeyPairs()) {
+
+			if(key_pair.getKeyName().equals(keypair)) {
+				error=false;
+				break;
+			}
+			else {
+				error=true;
+			}
+
+
+		}
+		if(error!=true) {
+			DeleteKeyPairRequest request = new DeleteKeyPairRequest().withKeyName(keypair);
+			DeleteKeyPairResult del_result = ec2.deleteKeyPair(request);
+
+			System.out.println("Successfully delete keypairs  "+ keypair);
+		}
+		else {
+			System.out.println("ERROR : Nonexistent keypair!");
+		}
+	}
 } 
